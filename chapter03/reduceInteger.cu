@@ -57,6 +57,29 @@ __global__ void reduceNeighbored (int *g_idata, int *g_odata, unsigned int n)
     if (tid == 0) g_odata[blockIdx.x] = idata[0];
 }
 
+// wrong function, because not synchronize between block
+__global__ void myReduceNeighbored (int *g_idata, int *g_odata, unsigned int n)
+{
+    // set thread ID
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // boundary check
+    if (idx >= n) return;
+
+    // in-place reduction in global memory
+    for (int stride = 1; stride < n; stride *= 2)
+    {
+        if ((idx % (2 * stride)) == 0)
+        {
+            g_idata[idx] += g_idata[idx + stride];
+            // printf("g_idata[%d] = %d\n", idx, g_idata[idx]);
+        }
+        // synchronize within threadblock
+        __syncthreads();
+    }
+}
+
+
 // Neighbored Pair Implementation with less divergence
 __global__ void reduceNeighboredLess (int *g_idata, int *g_odata,
                                       unsigned int n)
@@ -263,17 +286,58 @@ __global__ void reduceUnrollWarps8 (int *g_idata, int *g_odata, unsigned int n)
         __syncthreads();
     }
 
+    // if (blockIdx.x == 0 && threadIdx.x == 0) {
+    //     for(int i = 0; i < 128; i++) {
+    //         printf("idata[%d] = %d\n", i, idata[i]);
+    //     }
+    // }
     // unrolling warp
     if (tid < 32)
     {
         volatile int *vmem = idata;
         vmem[tid] += vmem[tid + 32];
+        // if (blockIdx.x == 0 && threadIdx.x == 0) {
+        //   printf("------------------------after 32\n");
+        //   for (int i = 0; i < 64; i++) {
+        //     printf("idata[%d] = %d\n", i, idata[i]);
+        //   }
+        // }
         vmem[tid] += vmem[tid + 16];
+        // if (blockIdx.x == 0 && threadIdx.x == 0) {
+        //   printf("------------------------after 16\n");
+        //   for (int i = 0; i < 64; i++) {
+        //     printf("idata[%d] = %d\n", i, idata[i]);
+        //   }
+        // }
         vmem[tid] += vmem[tid +  8];
+        // if (blockIdx.x == 0 && threadIdx.x == 0) {
+        //   printf("------------------------after 8\n");
+        //   for (int i = 0; i < 64; i++) {
+        //     printf("idata[%d] = %d\n", i, idata[i]);
+        //   }
+        // }
         vmem[tid] += vmem[tid +  4];
+        // if (blockIdx.x == 0 && threadIdx.x == 0) {
+        //   printf("------------------------after 4\n");
+        //   for (int i = 0; i < 32; i++) {
+        //     printf("idata[%d] = %d\n", i, idata[i]);
+        //   }
+        // }
         vmem[tid] += vmem[tid +  2];
+        // if (blockIdx.x == 0 && threadIdx.x == 0) {
+        //   printf("------------------------after 2\n");
+        //   for (int i = 0; i < 32; i++) {
+        //     printf("idata[%d] = %d\n", i, idata[i]);
+        //   }
+        // }
         vmem[tid] += vmem[tid +  1];
     }
+    // if (blockIdx.x == 0 && threadIdx.x == 0) {
+    //   printf("------------------------after 1\n");
+    //   for (int i = 0; i < 32; i++) {
+    //     printf("idata[%d] = %d\n", i, idata[i]);
+    //   }
+    // }
 
     // write result for this block to global mem
     if (tid == 0) g_odata[blockIdx.x] = idata[0];
@@ -477,7 +541,8 @@ int main(int argc, char **argv)
     for (int i = 0; i < size; i++)
     {
         // mask off high 2 bytes to force max number to 255
-        h_idata[i] = (int)( rand() & 0xFF );
+        // h_idata[i] = (int)( rand() & 0xFF );
+        h_idata[i] = (int)( 1 );
     }
 
     memcpy (tmp, h_idata, bytes);
@@ -496,6 +561,20 @@ int main(int argc, char **argv)
     int cpu_sum = recursiveReduce (tmp, size);
     iElaps = seconds() - iStart;
     printf("cpu reduce      elapsed %f sec cpu_sum: %d\n", iElaps, cpu_sum);
+
+    // kernel 0 - mykernel: reduceNeighbored
+    CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));
+    CHECK(cudaDeviceSynchronize());
+    iStart = seconds();
+    myReduceNeighbored<<<grid, block>>>(d_idata, nullptr, size);
+    CHECK(cudaDeviceSynchronize());
+    iElaps = seconds() - iStart;
+    h_odata[0] = 0;
+    CHECK(cudaMemcpy(h_odata, d_idata, sizeof(int),
+                     cudaMemcpyDeviceToHost));
+    gpu_sum = h_odata[0];
+    printf("gpu mNeighbored elapsed %f sec gpu_sum: %d <<<grid %d block "
+           "%d>>>\n", iElaps, gpu_sum, grid.x, block.x);
 
     // kernel 1: reduceNeighbored
     CHECK(cudaMemcpy(d_idata, h_idata, bytes, cudaMemcpyHostToDevice));

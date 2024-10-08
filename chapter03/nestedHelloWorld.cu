@@ -21,9 +21,9 @@ __global__ void nestedHelloWorld(int const iSize, int iDepth)
     int nthreads = iSize >> 1;
 
     // thread 0 launches child grid recursively
-    if(tid == 0 && nthreads > 0)
+    if(tid == 0 && blockIdx.x == 0 && nthreads > 0)
     {
-        nestedHelloWorld<<<1, nthreads>>>(nthreads, ++iDepth);
+        nestedHelloWorld<<<2, nthreads>>>(nthreads, ++iDepth);
         printf("-------> nested execution depth: %d\n", iDepth);
     }
 }
