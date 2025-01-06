@@ -12,16 +12,17 @@
  * scheduling of these kernels simpler to visualize in the Visual Profiler.
  */
 
-#define N 300000
+#define N 300
 #define NSTREAM 4
 
 __global__ void kernel_1()
 {
     double sum = 0.0;
 
-    for(int i = 0; i < N; i++)
-    {
+    for (long i = 0; i < N; i++) {
+      for (long j = 0; j < N; j++) {
         sum = sum + tan(0.1) * tan(0.1);
+      }
     }
 }
 
@@ -29,9 +30,10 @@ __global__ void kernel_2()
 {
     double sum = 0.0;
 
-    for(int i = 0; i < N; i++)
-    {
+     for (long i = 0; i < N; i++) {
+      for (long j = 0; j < N; j++) {
         sum = sum + tan(0.1) * tan(0.1);
+      }
     }
 }
 
@@ -39,9 +41,10 @@ __global__ void kernel_3()
 {
     double sum = 0.0;
 
-    for(int i = 0; i < N; i++)
-    {
+     for (long i = 0; i < N; i++) {
+      for (long j = 0; j < N; j++) {
         sum = sum + tan(0.1) * tan(0.1);
+      }
     }
 }
 
@@ -49,9 +52,10 @@ __global__ void kernel_4()
 {
     double sum = 0.0;
 
-    for(int i = 0; i < N; i++)
-    {
+     for (long i = 0; i < N; i++) {
+      for (long j = 0; j < N; j++) {
         sum = sum + tan(0.1) * tan(0.1);
+      }
     }
 }
 
@@ -145,7 +149,7 @@ int main(int argc, char **argv)
 
     // calculate elapsed time
     CHECK(cudaEventElapsedTime(&elapsed_time, start, stop));
-    printf("Measured time for parallel execution = %.3fs\n",
+    printf("Measured time for parallel execution = %.6fs\n",
            elapsed_time / 1000.0f);
 
     // release all stream

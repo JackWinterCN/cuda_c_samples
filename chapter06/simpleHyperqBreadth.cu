@@ -12,7 +12,7 @@
  * visualize in the Visual Profiler.
  */
 
-#define N 300000
+#define N 30000000
 #define NSTREAM 4
 
 __global__ void kernel_1()
@@ -21,7 +21,7 @@ __global__ void kernel_1()
 
     for(int i = 0; i < N; i++)
     {
-        sum = sum + tan(0.1) * tan(0.1);
+        sum = sum + i * tan(0.1);
     }
 }
 
@@ -31,7 +31,7 @@ __global__ void kernel_2()
 
     for(int i = 0; i < N; i++)
     {
-        sum = sum + tan(0.1) * tan(0.1);
+        sum = sum + i * tan(0.1);
     }
 }
 
@@ -41,7 +41,7 @@ __global__ void kernel_3()
 
     for(int i = 0; i < N; i++)
     {
-        sum = sum + tan(0.1) * tan(0.1);
+        sum = sum + i * tan(0.1);
     }
 }
 
@@ -51,7 +51,7 @@ __global__ void kernel_4()
 
     for(int i = 0; i < N; i++)
     {
-        sum = sum + tan(0.1) * tan(0.1);
+        sum = sum + i * tan(0.1);
     }
 }
 
